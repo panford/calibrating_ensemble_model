@@ -1,1 +1,4 @@
-# calibrating_ensemble_model
+# How calibrated are Ensemble Models?
+
+This project explores calibration for deep ensemble models.
+
