@@ -1,29 +1,25 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from get_mnist import MNIST
-from models import SoftmaxModel as smodel
+from prepare_data import MNIST
+from models import Model as base_model
 from tqdm import tqdm
+from absl import app, flags
+from utils import save_checkpoint
 
-epochs = 20
-lr = 0.05
-ensemble_size = 5
-dataset = "FashionMNIST"
-seed = 100
+FLAGS = flags.FLAGS
 
-loss_fn = F.nll_loss
+flags.DEFINE_integer('epochs', 20, 'num of epochs', lower_bound=1)
+flags.DEFINE_integer('num_ensemble', 5, 'number of ensemble models')
+flags.DEFINE_integer('batch_size', 32, 'batch size')
+flags.DEFINE_float('lr', 0.001, 'learning rate')
+flags.DEFINE_integer('seed', 100, 'random seed')
+flags.DEFINE_float('momentum', 0.9, 'momentum for optimizer')
+flags.DEFINE_float('weight_decay', 5e-4, 'optimizer weight decay')
+flags.DEFINE_string('chkpt_path', './checkpoints', "checkpointing path")
 
-input_size, num_classes, train_dataset, test_dataset = MNIST()
-kwargs = {"num_workers": 4, "pin_memory": True}
 
-train_loader = torch.utils.data.DataLoader(
-    train_dataset, batch_size=128, shuffle=True, **kwargs
-)
-
-milestones = [10, 20]
-ensemble = [smodel(input_size, num_classes).cuda() for _ in range(ensemble_size)]
-
-def train(model, train_loader, optimizer, epoch, loss_fn):
+def train(model, train_loader, optimizer, epoch, criterion):
     model.train()
 
     total_loss = []
@@ -35,7 +31,7 @@ def train(model, train_loader, optimizer, epoch, loss_fn):
         optimizer.zero_grad()
 
         prediction = model(data)
-        loss = loss_fn(prediction, target)
+        loss = criterion(prediction, target)
 
         loss.backward()
         optimizer.step()
@@ -46,28 +42,52 @@ def train(model, train_loader, optimizer, epoch, loss_fn):
     print(f"Epoch: {epoch}:")
     print(f"Train Set: Average Loss: {avg_loss:.2f}")
 
+def main(argv):
 
-optimizers = []
-schedulers = []
+  criterion = F.nll_loss
 
-for model in ensemble:
-    # Need different optimisers to apply weight decay and momentum properly
-    # when only optimising one element of the ensemble
-    optimizers.append(
-        torch.optim.SGD(
-            model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4
-        )
-    )
+  train_dataset, _ , input_dim, num_classes = MNIST()
+  kwargs = {"num_workers": 4, "pin_memory": True}
 
-    schedulers.append(
-        torch.optim.lr_scheduler.MultiStepLR(
-            optimizers[-1], milestones=milestones, gamma=0.1
-        )
-    )
+  train_loader = torch.utils.data.DataLoader(
+      train_dataset, batch_size=FLAGS.batch_size, shuffle=True, **kwargs
+  )
 
-for epoch in range(1, epochs + 1):
-    for i, model in enumerate(ensemble):
-        train(model, train_loader, optimizers[i], epoch, loss_fn)
-        schedulers[i].step()
+  milestones = [10, 20]
+  ensemble = [base_model(input_dim, num_classes).cuda() for _ in range(FLAGS.num_ensemble)]
 
-    # test(ensemble, test_loader, loss_fn)
+  optimizers = []
+  schedulers = []
+
+  for model in ensemble:
+      optimizers.append(
+          torch.optim.SGD(
+              model.parameters(), lr=FLAGS.lr, momentum=FLAGS.momentum, weight_decay=FLAGS.weight_decay
+          )
+      )
+
+      schedulers.append(
+          torch.optim.lr_scheduler.MultiStepLR(
+              optimizers[-1], milestones=milestones, gamma=0.1
+          )
+      )
+
+  for epoch in range(1, FLAGS.epochs + 1):
+      for i, model in enumerate(ensemble):
+          train(model, train_loader, optimizers[i], epoch, criterion)
+          schedulers[i].step()
+
+  kwargs = {}
+  for i, model in enumerate(ensemble):
+    model_state_dict_i = 'model'+str(i)+'state_dict'
+    optim_state_dict_i = 'optim'+str(i)+'state_dict'
+
+    kwargs[model_state_dict_i] = model.state_dict()
+    kwargs[optim_state_dict_i] = optimizers[i].state_dict()
+      # test(ensemble, test_loader, criterion)
+  kwargs['num_ensemble'] = FLAGS.num_ensemble
+  kwargs['model_args'] = {'input_dim':input_dim, 'num_classes':num_classes}
+  save_checkpoint(FLAGS.chkpt_path, kwargs)
+
+if __name__ == '__main__':
+  app.run(main)
