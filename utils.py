@@ -1,11 +1,23 @@
-import torch
 import os
+import torch
+from torch.utils.tensorboard import SummaryWriter
+
 
 def save_checkpoint(path, kwargs):
+  file_ = os.path.join(path, 'ensemble.pt')
+
+  if os.path.isfile(file_):
+    os.remove(file_)
+
   if not os.path.exists(path):
     os.makedirs(path)
-  torch.save(kwargs, os.path.join(path, 'ensemble.pt'))
-  # else:
+    
+  torch.save(kwargs, file_)
+  # else
 
 def load_checkpoint(path):
-  return torch.load(os.path.join(path, 'ensemble.pt'))
+  file_ = os.path.join(path, 'ensemble.pt')
+  if not os.path.exists(file_):
+    raise FileNotFoundError ("Checkpoint file not present")
+  else: 
+    return torch.load(file_)

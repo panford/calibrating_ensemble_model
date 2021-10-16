@@ -6,6 +6,7 @@ from models import Model as base_model
 from tqdm import tqdm
 from absl import app, flags
 from utils import save_checkpoint
+# from test import test
 
 FLAGS = flags.FLAGS
 
@@ -17,6 +18,7 @@ flags.DEFINE_integer('seed', 100, 'random seed')
 flags.DEFINE_float('momentum', 0.9, 'momentum for optimizer')
 flags.DEFINE_float('weight_decay', 5e-4, 'optimizer weight decay')
 flags.DEFINE_string('chkpt_path', './checkpoints', "checkpointing path")
+
 
 
 def train(model, train_loader, optimizer, epoch, criterion):
@@ -46,12 +48,16 @@ def main(argv):
 
   criterion = F.nll_loss
 
-  train_dataset, _ , input_dim, num_classes = MNIST()
+  train_dataset, test_dataset , input_dim, num_classes = MNIST()
   kwargs = {"num_workers": 4, "pin_memory": True}
 
   train_loader = torch.utils.data.DataLoader(
-      train_dataset, batch_size=FLAGS.batch_size, shuffle=True, **kwargs
+      train_dataset, batch_size=FLAGS.batch_size, shuffle=True#, **kwargs
   )
+
+  test_loader = torch.utils.data.DataLoader(
+    test_dataset, batch_size=5000, shuffle=False#, **kwargs
+)
 
   milestones = [10, 20]
   ensemble = [base_model(input_dim, num_classes).cuda() for _ in range(FLAGS.num_ensemble)]
@@ -84,7 +90,7 @@ def main(argv):
 
     kwargs[model_state_dict_i] = model.state_dict()
     kwargs[optim_state_dict_i] = optimizers[i].state_dict()
-      # test(ensemble, test_loader, criterion)
+      
   kwargs['num_ensemble'] = FLAGS.num_ensemble
   kwargs['model_args'] = {'input_dim':input_dim, 'num_classes':num_classes}
   save_checkpoint(FLAGS.chkpt_path, kwargs)

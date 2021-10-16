@@ -7,8 +7,6 @@ from prepare_data import MNIST
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer('epochs', 20, 'num of epochs', lower_bound=1)
-flags.DEFINE_integer('num_ensemble', 5, 'number of ensemble models')
 flags.DEFINE_string('chkpt_path','./checkpoints', "checkpoint path")
 flags.DEFINE_bool('return_pred_targ', 'False', 'boolean return predictions and targets')
 
@@ -67,7 +65,8 @@ def main(argv):
   criterion = F.nll_loss
   ensemble = [base_model(input_dim, num_classes).cuda() for _ in range(checkpoint['num_ensemble'])]
 
-  
+  for i, model in enumerate(ensemble):
+    model.load_state_dict(checkpoint['model'+str(i)+'state_dict'])
   kwargs = {"num_workers": 4, "pin_memory": True}
 
   test_loader = torch.utils.data.DataLoader(
