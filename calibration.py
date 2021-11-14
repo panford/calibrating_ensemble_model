@@ -1,29 +1,101 @@
 import numpy as np
 import sklearn
+from typing import Dict, List
 from sklearn.calibration import calibration_curve
 from sklearn.model_selection import train_test_split
+from abc import ABC
+import torch
+import torch.nn as nn
 
-class calibrator():
-  def __init__(self, class_type='binary', n_bins=10):
-    self.class_type = class_type
-    self.n_bins = None
+# class CalibratorBase():
+#   pass
+
+class _CalibrationError(nn.Module):
+  def __init__(self, 
+              num_classes:int=None, 
+              n_bins:int=10):
+
+    super(CalibrationError).__init__(self)
+    #TODO:
+    # i. check if num_classes is a positive number greater or equal to 2
+    # ii. If greater than 2, multiclass else binary
+
+    # assert num_classes >= 2
+    self.num_classes = num_classes
+    self.n_bins = n_bins
     self.results_dict = {}
 
-    if class_type == "binary":
-      results_dict['ece'] = self.expected_cal_error_two_classes()
-      results_dict['mce'] = self.maximimum_cal_error_two_classes()
-      results_dict['rmsce'] = self.rmsce_cal_error_two_classes()
+    # if class_type == "binary":
+    #   results_dict['ece'] = self.expected_cal_error_two_classes()
+    #   results_dict['mce'] = self.maximimum_cal_error_two_classes()
+    #   results_dict['rmsce'] = self.rmsce_cal_error_two_classes()
 
-    elif class_type == 'multiclass':
-      results_dict['ece'] = self.expected_cal_error_multiclass()
-      results_dict['mce'] = self.maximimum_cal_error_multiclass()
-      results_dict['rmsce'] = self.rmsce_cal_error_multiclass()
+    # elif class_type == 'multiclass':
+    #   results_dict['ece'] = self.expected_cal_error_multiclass()
+    #   results_dict['mce'] = self.maximimum_cal_error_multiclass()
+    #   results_dict['rmsce'] = self.rmsce_cal_error_multiclass()
 
-    self.dataframe = None
-
+    # self.dataframe = None
+class _BinaryClassCalibrationError(_CalibrationError):
+  def __init__(self, num_classes=2):
+    super(BinaryClassCalibrationError, self).__init__()
   def set_target_prediction(self, y_true, y_pred):
     self.y_true = y_true
     self.y_pred = y_pred
+
+  def forward(self):
+    pass
+
+
+
+class _MultiClassCalibrationError():
+  def __init__():
+    pass
+
+
+class BinaryECE(_BinaryClassCalibrationError):
+  def __init__(self):
+    super(BinaryClassCalibrationError, self)
+    self.n_bins = n_bins
+
+
+class MulticlassECE(_MultiClassCalibrationError):
+  def __init__(self):
+    super(MulticlassECE, self)
+  
+  def forward(self, y_true, y_pred):
+    pass
+
+class BinaryMCE(_BinaryClassCalibrationError):
+  pass
+
+  def forward(self, y_true, y_pred):
+    pass
+
+class MulticlassMCE(_MultiClassCalibrationError):
+  pass
+
+  def forward(self, y_true, y_pred):
+    pass
+
+class BinaryRMSCE(_BinaryClassCalibrationError):
+  pass
+
+  def forward(self, y_true, y_pred):
+    pass
+
+class MulticlassRMSCE(_MultiClassCalibrationError):
+  pass
+
+  def forward(self, y_true, y_pred):
+    pass
+
+# class MaximumCalibrationError():
+#   pass
+
+# class RootMeanSquaredCalibrationError():
+#   pass
+
 
   def get_prob_scores(self, y_true, y_pred):
     return calibration_curve(y_true, y_pred, self.n_bins)
