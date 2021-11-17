@@ -54,7 +54,7 @@ class Calibration(nn.Module):
     scaled_diff = coeffs * acc_conf_diff
     return np.sqrt(np.sum(acc_conf_diff.numpy())).item()
 
-
+  #TODO Multiclass Calibration Errors
   # def Multiclass_ECE(self, probabilities, predictions, targets):
   #   return 
 
