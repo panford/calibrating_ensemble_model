@@ -58,13 +58,7 @@ class Calibration(nn.Module):
   # def Multiclass_ECE(self, probabilities, predictions, targets):
   #   return 
 
-
-  def reliability_diagram(self, probabilities, predictions, targets):
-    accuracies, confidences, _ = self.get_accuracy_confidence(probabilities, predictions, targets)
-    plt.plot(confidences, accuracies)
-
   def reliability_diagram(self, probabilities, predictions, targets, model_name, ax=None):
-    # prob_true, prob_pred = self.get_prob_scores(y_true, y_pred)
     
     accuracies, confidences, _ = self.get_accuracy_confidence(probabilities, predictions, targets)
     if ax==None:
